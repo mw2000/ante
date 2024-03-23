@@ -1,206 +1,178 @@
-# Foundry Template [![Open in Gitpod][gitpod-badge]][gitpod] [![Github Actions][gha-badge]][gha] [![Foundry][foundry-badge]][foundry] [![License: MIT][license-badge]][license]
+# Ante Smart Contract
 
-[gitpod]: https://gitpod.io/#https://github.com/PaulRBerg/foundry-template
-[gitpod-badge]: https://img.shields.io/badge/Gitpod-Open%20in%20Gitpod-FFB45B?logo=gitpod
-[gha]: https://github.com/PaulRBerg/foundry-template/actions
-[gha-badge]: https://github.com/PaulRBerg/foundry-template/actions/workflows/ci.yml/badge.svg
-[foundry]: https://getfoundry.sh/
-[foundry-badge]: https://img.shields.io/badge/Built%20with-Foundry-FFDB1C.svg
-[license]: https://opensource.org/licenses/MIT
-[license-badge]: https://img.shields.io/badge/License-MIT-blue.svg
+The Ante smart contract is a versatile platform designed for staking on arbitrary claims or commitments, identified by a unique hash. It allows users to stake for or against these claims using either native Ether (automatically wrapped as WETH) or specified ERC20 tokens. This contract introduces dynamic odds to incentivize early participation and ensure balance between the opposing sides, making the staking process both fair and engaging.
 
-A Foundry-based template for developing Solidity smart contracts, with sensible defaults.
-
-## What's Inside
-
-- [Forge](https://github.com/foundry-rs/foundry/blob/master/forge): compile, test, fuzz, format, and deploy smart
-  contracts
-- [Forge Std](https://github.com/foundry-rs/forge-std): collection of helpful contracts and cheatcodes for testing
-- [PRBTest](https://github.com/PaulRBerg/prb-test): modern collection of testing assertions and logging utilities
-- [Prettier](https://github.com/prettier/prettier): code formatter for non-Solidity files
-- [Solhint](https://github.com/protofire/solhint): linter for Solidity code
-
-## Getting Started
-
-Click the [`Use this template`](https://github.com/PaulRBerg/foundry-template/generate) button at the top of the page to
-create a new repository with this repo as the initial state.
-
-Or, if you prefer to install the template manually:
-
-```sh
-$ mkdir my-project
-$ cd my-project
-$ forge init --template PaulRBerg/foundry-template
-$ bun install # install Solhint, Prettier, and other Node.js deps
+NOTE: Please run tests with 
 ```
-
-If this is your first time with Foundry, check out the
-[installation](https://github.com/foundry-rs/foundry#installation) instructions.
+forge test --via-ir
+```
 
 ## Features
 
-This template builds upon the frameworks and libraries mentioned above, so please consult their respective documentation
-for details about their specific features.
+### Dynamic Odds
+The contract employs a dynamic odds system based on two main principles:
+- **Early Staking Incentive**: Participants who stake early in the staking period are rewarded with more favorable odds.
+- **Imbalance Adjustment**: The odds are adjusted to make staking on the less popular side more attractive, preventing imbalances.
 
-For example, if you're interested in exploring Foundry in more detail, you should look at the
-[Foundry Book](https://book.getfoundry.sh/). In particular, you may be interested in reading the
-[Writing Tests](https://book.getfoundry.sh/forge/writing-tests.html) tutorial.
+### Time-Restricted Staking and Withdrawing
+Each Ante comes with specific time constraints for both staking and withdrawing stakes:
+- **Staking Period**: Users are allowed to stake within this predefined period, with incentives for early staking.
+- **Unstaking Period**: Following the claim settlement, participants can withdraw their stakes and winnings only during this period.
 
-### Sensible Defaults
+### Support for ERC20 Tokens and Native ETH
+Stakes can be made using ERC20 tokens or native Ether. Ether stakes are automatically wrapped into WETH for consistency in handling stakes across different token types.
 
-This template comes with a set of sensible default configurations for you to use. These defaults can be found in the
-following files:
+### Claim Settlement
+Only the author of an Ante has the authority to settle the claim, determining the winning side. Settlement triggers the payout process based on the accumulated stakes and the dynamic odds calculated at the time of each stake.
 
-```text
-├── .editorconfig
-├── .gitignore
-├── .prettierignore
-├── .prettierrc.yml
-├── .solhint.json
-├── foundry.toml
-└── remappings.txt
+## Implementation
+
+### Creating an Ante
+To create an Ante, the author specifies a unique hash, the token address for staking, and the deadlines for staking and unstaking. The contract records the start of the staking period to apply early staking bonuses.
+
+```solidity
+function createAnte(string memory hash, address token, uint256 stakingDeadline, uint256 unstakingDeadline) external;
 ```
 
-### VSCode Integration
+### Staking on an Ante
+Users can stake on the Ante in favor or against the claim before the staking deadline. The odds are dynamically calculated at the time of staking, considering the timing and the stake imbalance.
 
-This template is IDE agnostic, but for the best user experience, you may want to use it in VSCode alongside Nomic
-Foundation's [Solidity extension](https://marketplace.visualstudio.com/items?itemName=NomicFoundation.hardhat-solidity).
-
-For guidance on how to integrate a Foundry project in VSCode, please refer to this
-[guide](https://book.getfoundry.sh/config/vscode).
-
-### GitHub Actions
-
-This template comes with GitHub Actions pre-configured. Your contracts will be linted and tested on every push and pull
-request made to the `main` branch.
-
-You can edit the CI script in [.github/workflows/ci.yml](./.github/workflows/ci.yml).
-
-## Installing Dependencies
-
-Foundry typically uses git submodules to manage dependencies, but this template uses Node.js packages because
-[submodules don't scale](https://twitter.com/PaulRBerg/status/1736695487057531328).
-
-This is how to install dependencies:
-
-1. Install the dependency using your preferred package manager, e.g. `bun install dependency-name`
-   - Use this syntax to install from GitHub: `bun install github:username/repo-name`
-2. Add a remapping for the dependency in [remappings.txt](./remappings.txt), e.g.
-   `dependency-name=node_modules/dependency-name`
-
-Note that OpenZeppelin Contracts is pre-installed, so you can follow that as an example.
-
-## Writing Tests
-
-To write a new test contract, you start by importing [PRBTest](https://github.com/PaulRBerg/prb-test) and inherit from
-it in your test contract. PRBTest comes with a pre-instantiated [cheatcodes](https://book.getfoundry.sh/cheatcodes/)
-environment accessible via the `vm` property. If you would like to view the logs in the terminal output you can add the
-`-vvv` flag and use [console.log](https://book.getfoundry.sh/faq?highlight=console.log#how-do-i-use-consolelog).
-
-This template comes with an example test contract [Foo.t.sol](./test/Foo.t.sol)
-
-## Usage
-
-This is a list of the most frequently needed commands.
-
-### Build
-
-Build the contracts:
-
-```sh
-$ forge build
+```solidity
+function stake(string memory hash, uint256 amount, bool isFor, address token) external payable;
 ```
 
-### Clean
+### Unstaking and Claiming Winnings
+After the Ante is settled, participants can unstake and claim their winnings within the unstaking period. This ensures fairness and adherence to the predefined staking rules.
 
-Delete the build artifacts and cache directories:
 
-```sh
-$ forge clean
+```solidity
+function unstake(string memory hash) external;
 ```
 
-### Compile
+### Settling the Ante
+The Ante's author finalizes the outcome, allowing the participants to unstake and receive their winnings based on the settled outcome and the dynamic odds.
 
-Compile the contracts:
-
-```sh
-$ forge build
+```solidity
+function settleAnte(string memory hash, bool outcome) external;
 ```
 
-### Coverage
+## Designing a Full-Stack System for Ante Smart Contracts
 
-Get a test coverage report:
+Creating a full-stack system for Ante smart contracts with the primary goal of offering the smoothest user experience (UX) requires careful selection of development tools and frameworks. The focus should be on simplifying interactions, improving transaction handling, and enhancing usability.
 
-```sh
-$ forge coverage
+### Frontend Development: React and Wagmi
+
+Utilizing **React** alongside **Wagmi**, a collection of React Hooks tailored for Ethereum, forms the foundation of our frontend development. This combination ensures a seamless integration with Ethereum wallets and smart contracts, crucial for intuitive user interactions.
+
+#### Integration Highlights
+
+- **Ethereum Wallet Connections**: Wagmi facilitates effortless wallet connections, streamlining the user's initial interaction with the DApp.
+- **Transaction Feedback**: Provides users with immediate transaction status updates, enhancing transparency and trust.
+- **Network Changes Management**: Automates the handling of network switches, maintaining a consistent UX across different Ethereum environments.
+
+### Backend and Smart Contract Interaction
+
+For backend processes and smart contract interactions, **Ethers.js** is preferred for its compatibility with Wagmi and ease of use in executing blockchain transactions and managing application state based on contract events.
+
+#### Interaction Highlights
+
+- **Simplified Contract Calls**: Abstract complex blockchain transactions into straightforward application functions, obscuring the backend complexities from the end-user.
+- **Real-Time State Updates**: Utilize Ethers.js to monitor smart contract events, ensuring the DApp reflects the latest blockchain state.
+
+### Account Abstraction and Smart Wallets
+
+Integrating **account abstraction** through **smart wallets** can significantly elevate the UX by abstracting the complexities of transaction signing and gas fees, making the platform accessible even to blockchain novices.
+
+#### Smart Wallet Implementation
+
+- **Gas Fee Abstraction**: Incorporate relayer networks or similar services to handle gas fees, allowing users to perform transactions without needing ETH in their wallets.
+- **Seamless Onboarding**: Leverage smart wallets for an effortless onboarding experience, enabling immediate platform interaction without traditional wallet setup hurdles.
+
+### UX Simplification Strategies
+
+Achieving the smoothest UX involves focusing on key areas for simplification:
+
+- **Wallet Connection**: Implement a straightforward, guided process for wallet integration, minimizing barriers to entry.
+- **Staking Workflow**: Streamline the staking journey with clear guidance and immediate feedback on transaction statuses.
+- **User-Friendly Errors**: Translate technical blockchain errors into understandable messages, providing clear next steps for resolution.
+- **Responsive Design**: Guarantee a responsive application, ensuring a uniform experience across various devices.
+
+### Tools and Technologies Overview
+
+- **Frontend**: Developed with React, integrated with Wagmi for Ethereum functionalities.
+- **Backend/Blockchain**: Utilizes Ethers.js for smart contract interactions, with contracts deployed on Ethereum.
+- **UX Enhancements**: Features account abstraction via smart wallets for streamlined experiences, alongside intuitive UI components and effective real-time state management.
+
+## Bonus 1: People can withdraw their funds and stake again within the given period. What would this look like?
+
+To incorporate the functionality where people can withdraw their funds and stake again within the given period into the Ante smart contract, several modifications are necessary. These changes aim to enhance flexibility for users, allowing them to adjust their stakes based on new information or strategies without waiting for the staking period to end. Here's a breakdown of the necessary changes:
+
+### Modify the stake Function
+The stake function needs to allow for additional staking within the staking period. This involves checking if the user already has a stake and, if so, adding to their current stake amount. The dynamic odds calculation should also be adjusted to account for the updated stake.
+
+```solidity
+function stake(string memory hash, uint256 amount, bool isFor, address token) external payable {
+   // Existing validation logic...
+
+   Stake storage userStake = stakes[hash][msg.sender];
+   if (userStake.amount > 0) {
+      // User is adding to their stake
+      userStake.amount += amount;
+   } else {
+      // New stake
+      userStake.amount = amount;
+      userStake.isFor = isFor;
+      userStake.odds = calculateOdds(hash, amount, isFor);
+      userStake.timestamp = block.timestamp;
+   }
+
+   // Adjust total staked amounts
+   if (isFor) {
+      antes[hash].forTotal += amount;
+   } else {
+      antes[hash].againstTotal += amount;
+   }
+
+   emit Staked(msg.sender, hash, isFor, amount, userStake.odds);
+}
 ```
 
-### Deploy
+### Implement a withdrawStake Function
+To allow users to withdraw their stakes before the staking period ends, implement a withdrawStake function. This function should subtract from the user's current stake and the total staked amount on the chosen side. Care should be taken to prevent withdrawing more than the user's current stake.
 
-Deploy to Anvil:
+```solidity
+function withdrawStake(string memory hash, uint256 amount) external {
+   require(block.timestamp <= antes[hash].stakingDeadline, "Cannot withdraw after staking period");
+   
+   Stake storage userStake = stakes[hash][msg.sender];
+   require(userStake.amount >= amount, "Cannot withdraw more than the current stake");
 
-```sh
-$ forge script script/Deploy.s.sol --broadcast --fork-url http://localhost:8545
+   userStake.amount -= amount;
+   if (userStake.isFor) {
+      antes[hash].forTotal -= amount;
+   } else {
+      antes[hash].againstTotal -= amount;
+   }
+
+   // Return the withdrawn stake to the user
+   IERC20(antes[hash].token).transfer(msg.sender, amount);
+
+   emit StakeWithdrawn(msg.sender, hash, amount);
+}
 ```
 
-For this script to work, you need to have a `MNEMONIC` environment variable set to a valid
-[BIP39 mnemonic](https://iancoleman.io/bip39/).
+### Adjust the calculateOdds Function
+The calculateOdds function should be adjusted to ensure it accurately reflects the current staking landscape, especially after stake withdrawals. This might involve recalculating odds based on the updated forTotal and againstTotal amounts whenever a stake is added or withdrawn.
 
-For instructions on how to deploy to a testnet or mainnet, check out the
-[Solidity Scripting](https://book.getfoundry.sh/tutorials/solidity-scripting.html) tutorial.
+## Bonus 2: Let’s say we allow users to put NFTs at stake. How would you achieve that? What are the challenges?
 
-### Format
+Incorporating NFT staking into a system like the Ante smart contract introduces several unique challenges, mainly due to the intrinsic properties of NFTs compared to fungible tokens. 
+- Subjectivity and Variability: Unlike fungible tokens, NFTs have subjective values that can fluctuate widely based on demand, rarity, the artist's reputation, and community trends. Establishing a fair and dynamic valuation system for staking purposes is complex.
+- Liquidity Concerns: The liquidity of NFTs can be significantly lower than that of fungible tokens, making it harder to realize their value instantly or use them as collateral.
 
-Format the contracts:
+## Conclusion
+The Ante smart contract revolutionizes the concept of staking on claims by incorporating dynamic odds, early staking incentives, and mechanisms to maintain stake balance. By supporting a wide range of tokens, it offers flexibility and accessibility to participants, making it a comprehensive tool for decentralized betting and decision-making processes based on stakeholder consensus.
 
-```sh
-$ forge fmt
-```
 
-### Gas Usage
 
-Get a gas report:
 
-```sh
-$ forge test --gas-report
-```
-
-### Lint
-
-Lint the contracts:
-
-```sh
-$ bun run lint
-```
-
-### Test
-
-Run the tests:
-
-```sh
-$ forge test
-```
-
-Generate test coverage and output result to the terminal:
-
-```sh
-$ bun run test:coverage
-```
-
-Generate test coverage with lcov report (you'll have to open the `./coverage/index.html` file in your browser, to do so
-simply copy paste the path):
-
-```sh
-$ bun run test:coverage:report
-```
-
-## Related Efforts
-
-- [abigger87/femplate](https://github.com/abigger87/femplate)
-- [cleanunicorn/ethereum-smartcontract-template](https://github.com/cleanunicorn/ethereum-smartcontract-template)
-- [foundry-rs/forge-template](https://github.com/foundry-rs/forge-template)
-- [FrankieIsLost/forge-template](https://github.com/FrankieIsLost/forge-template)
-
-## License
-
-This project is licensed under MIT.
